@@ -1,3 +1,4 @@
+# coding=UTF-8
 from pgcli.pgexecute import _parse_dsn
 from textwrap import dedent
 from utils import *
@@ -51,3 +52,12 @@ def test_conn(executor):
         | abc |
         +-----+
         SELECT 1""")
+
+
+@dbtest
+def test_unicode_support_in_output(executor):
+    run(executor, "create table unicodechars(t text)")
+    run(executor, u"insert into unicodechars (t) values ('é')")
+
+    # See issue #24, this raises an exception without proper handling
+    assert u'é' in run(executor, "select * from unicodechars", join=True)

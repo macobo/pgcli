@@ -14,12 +14,6 @@ def connection():
 
 
 @pytest.fixture
-def cursor(connection):
-    with connection.cursor() as cur:
-        return cur
-
-
-@pytest.fixture
 def executor(connection):
     return PGExecute(database='_test_db', user=POSTGRES_USER, host=POSTGRES_HOST,
         password=None, port=None)
