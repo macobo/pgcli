@@ -153,8 +153,8 @@ class PGCli(object):
             lexer=SqlLexer, bottom_toolbars=[PGToolbar()])
 
         completer = PGCompleter(self.smart_completion)
-        completer.extend_special_commands(CASE_SENSITIVE_COMMANDS.keys())
-        completer.extend_special_commands(NON_CASE_SENSITIVE_COMMANDS.keys())
+        # completer.extend_special_commands(CASE_SENSITIVE_COMMANDS.keys())
+        # completer.extend_special_commands(NON_CASE_SENSITIVE_COMMANDS.keys())
         refresh_completions(pgexecute, completer)
         buf = PGBuffer(always_multiline=self.multi_line, completer=completer,
                 history=FileHistory(os.path.expanduser('~/.pgcli-history')))
@@ -314,7 +314,7 @@ def refresh_completions(pgexecute, completer):
     for table in tables:
         table = table[1:-1] if table[0] == '"' and table[-1] == '"' else table
         completer.extend_column_names(table, columns[table])
-    completer.extend_database_names(pgexecute.databases())
+    # completer.extend_database_names(pgexecute.databases())
 
 if __name__ == "__main__":
     cli()

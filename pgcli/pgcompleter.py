@@ -8,7 +8,81 @@ from re import compile
 
 _logger = logging.getLogger(__name__)
 
+from sqlcomplete.postgresql import Completer
 class PGCompleter(Completer):
+    keywords = ['ACCESS', 'ADD', 'ALL', 'ALTER TABLE', 'AND', 'ANY', 'AS',
+            'ASC', 'AUDIT', 'BETWEEN', 'BY', 'CASE', 'CHAR', 'CHECK',
+            'CLUSTER', 'COLUMN', 'COMMENT', 'COMPRESS', 'CONNECT', 'CREATE',
+            'CURRENT', 'DATE', 'DECIMAL', 'DEFAULT', 'DELETE FROM', 'DESC',
+            'DESCRIBE', 'DISTINCT', 'DROP', 'ELSE', 'EXCLUSIVE', 'EXISTS',
+            'FILE', 'FLOAT', 'FOR', 'FROM', 'FULL', 'GRANT', 'GROUP BY',
+            'HAVING', 'IDENTIFIED', 'IMMEDIATE', 'IN', 'INCREMENT', 'INDEX',
+            'INITIAL', 'INSERT INTO', 'INTEGER', 'INTERSECT', 'INTO', 'IS',
+            'JOIN', 'LEFT', 'LEVEL', 'LIKE', 'LOCK', 'LONG', 'MAXEXTENTS',
+            'MINUS', 'MLSLABEL', 'MODE', 'MODIFY', 'NOAUDIT', 'NOCOMPRESS',
+            'NOT', 'NOWAIT', 'NULL', 'NUMBER', 'OF', 'OFFLINE', 'ON', 'ONLINE',
+            'OPTION', 'OR', 'ORDER BY', 'OUTER', 'PCTFREE', 'PRIMARY', 'PRIOR',
+            'PRIVILEGES', 'PUBLIC', 'RAW', 'RENAME', 'RESOURCE', 'REVOKE',
+            'RIGHT', 'ROW', 'ROWID', 'ROWNUM', 'ROWS', 'SELECT', 'SESSION',
+            'SET', 'SHARE', 'SIZE', 'SMALLINT', 'START', 'SUCCESSFUL',
+            'SYNONYM', 'SYSDATE', 'TABLE', 'THEN', 'TO', 'TRIGGER', 'UID',
+            'UNION', 'UNIQUE', 'UPDATE', 'USE', 'USER', 'VALIDATE', 'VALUES',
+            'VARCHAR', 'VARCHAR2', 'VIEW', 'WHEN', 'WHENEVER', 'WHERE', 'WITH',
+            ]
+
+    functions = ['AVG', 'COUNT', 'DISTINCT', 'FIRST', 'FORMAT', 'LAST',
+            'LCASE', 'LEN', 'MAX', 'MIN', 'MID', 'NOW', 'ROUND', 'SUM', 'TOP',
+            'UCASE']
+
+    def __init__(self, smart_completion=True):
+        super(self.__class__, self).__init__()
+        self.smart_completion = smart_completion
+        self.completer = Completer()
+        self.special_commands = []
+        self.name_pattern = compile("^[_a-z][_a-z0-9\$]*$")
+
+    def escape_name(self, name):
+        if not self.name_pattern.match(name) or name.upper() in self.keywords or name.upper() in self.functions:
+            name = '"%s"' % name
+        return name
+
+    def unescape_name(self, name):
+        if name[0] == '"' and name[-1] == '"':
+            name = name[1:-1]
+        return name
+
+    def escaped_names(self, names):
+        return [self.escape_name(name) for name in names]
+
+    def extend_table_names(self, tables):
+        tables = self.escaped_names(tables)
+
+        # self.tables.extend(tables)
+        self.completer.add('table_name', *tables)
+        # self.all_completions.update(tables)
+
+    def extend_column_names(self, table, columns):
+        columns = self.escaped_names(columns)
+
+        unescaped_table_name = self.unescape_name(table)
+
+        self.completer.add('column_name', *columns)
+        # self.columns[unescaped_table_name].extend(columns)
+        # self.all_completions.update(columns)
+
+    def get_completions(self, document, complete_event, smart_completion=None):
+        if smart_completion is None:
+            smart_completion = self.smart_completion
+
+        from sqlcomplete.autocompleter import last_token
+        text = document.text_before_cursor
+        result = self.completer.autocomplete(text)
+        _logger.debug("%r: %r, %r", text, result, last_token(text))
+        return [Completion(item, -len(last_token(text))) for item in result]
+
+
+
+class APGCompleter(Completer):
     keywords = ['ACCESS', 'ADD', 'ALL', 'ALTER TABLE', 'AND', 'ANY', 'AS',
             'ASC', 'AUDIT', 'BETWEEN', 'BY', 'CASE', 'CHAR', 'CHECK',
             'CLUSTER', 'COLUMN', 'COMMENT', 'COMPRESS', 'CONNECT', 'CREATE',
@@ -113,6 +187,12 @@ class PGCompleter(Completer):
         # 'word_before_cursor'.
         if not smart_completion:
             return self.find_matches(word_before_cursor, self.all_completions)
+
+        from sqlcomplete.autocompleter import last_token
+        from sqlcomplete.postgresql import autocomplete
+        text = document.text_before_cursor
+        _logger.debug("%r: %r, %r", text, autocomplete(text), last_token(text))
+        return [Completion(item, -len(text)) for item in autocomplete(text)]
 
         category, scope = suggest_type(document.text,
                 document.text_before_cursor)
